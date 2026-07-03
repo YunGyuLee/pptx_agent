@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>에이전트 테스트</title>
+<style>
+:root {
+  --blue: #0046FF; --navy: #003087;
+  --gray-50: #f9fafb; --gray-100: #f3f4f6; --gray-200: #e5e7eb;
+  --gray-300: #d1d5db; --gray-400: #9ca3af; --gray-500: #6b7280;
+  --gray-600: #4b5563; --gray-800: #1f2937; --white: #fff;
+  --green: #10b981; --red: #ef4444; --amber: #f59e0b;
+  --radius: 6px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, 'Apple SD Gothic Neo', sans-serif; background: var(--gray-50); color: var(--gray-800); font-size: 13px; }
+
+/* 상단바 */
+.topbar { background: var(--white); border-bottom: 1px solid var(--gray-200); padding: 13px 24px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 10; }
+.topbar h1 { font-size: 15px; font-weight: 700; color: var(--navy); }
+.env-tag { font-size: 11px; color: var(--gray-500); background: var(--gray-100); border: 1px solid var(--gray-200); border-radius: 4px; padding: 3px 8px; }
+
+/* 탭 */
+.tabs { display: flex; gap: 0; border-bottom: 2px solid var(--gray-200); background: var(--white); padding: 0 24px; }
+.tab { padding: 10px 20px; font-size: 13px; font-weight: 600; color: var(--gray-400); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: color .15s; }
+.tab.active { color: var(--navy); border-bottom-color: var(--navy); }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* 버튼 */
+button { border: none; border-radius: var(--radius); padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer; transition: opacity .15s; }
+button:hover { opacity: .85; }
+button:disabled { opacity: .4; cursor: not-allowed; }
+.btn-primary { background: var(--blue); color: var(--white); }
+.btn-group  { background: var(--navy); color: var(--white); font-size: 11px; padding: 4px 10px; }
+.btn-run    { background: var(--blue); color: var(--white); font-size: 11px; padding: 4px 10px; min-width: 52px; }
+.btn-clear  { background: var(--gray-200); color: var(--gray-600); }
+.btn-sm     { background: var(--gray-100); color: var(--gray-600); border: 1px solid var(--gray-200); padding: 3px 8px; font-size: 11px; }
+
+/* 본문 */
+main { max-width: 1100px; margin: 0 auto; padding: 24px 20px 60px; }
+
+/* 자유 테스트 레이아웃 */
+.free-layout { display: grid; grid-template-columns: 340px 1fr; gap: 16px; align-items: start; }
+.panel { background: var(--white); border: 1px solid var(--gray-200); border-radius: 8px; padding: 16px; }
+.panel h3 { font-size: 12px; font-weight: 700; color: var(--gray-500); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 12px; }
+
+/* 폼 요소 */
+label { display: block; font-size: 11px; font-weight: 600; color: var(--gray-600); margin-bottom: 4px; margin-top: 12px; }
+label:first-of-type { margin-top: 0; }
+select, textarea, input[type=text] {
+  width: 100%; border: 1px solid var(--gray-300); border-radius: var(--radius);
+  padding: 7px 10px; font-size: 12px; color: var(--gray-800);
+  background: var(--white); outline: none; transition: border-color .15s;
+}
+select:focus, textarea:focus { border-color: var(--blue); }
+textarea { resize: vertical; font-family: 'Menlo', monospace; }
+
+/* 파일 드롭존 */
+.dropzone {
+  border: 2px dashed var(--gray-300); border-radius: var(--radius);
+  padding: 16px; text-align: center; cursor: pointer;
+  color: var(--gray-400); font-size: 12px; transition: border-color .15s, background .15s;
+}
+.dropzone:hover, .dropzone.drag { border-color: var(--blue); background: #f0f4ff; color: var(--blue); }
+.file-list { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+.file-chip {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--gray-100); border-radius: 4px; padding: 4px 8px; font-size: 11px;
+}
+.file-chip span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-chip button { background: none; color: var(--gray-400); padding: 0 2px; font-size: 13px; line-height: 1; }
+.file-chip button:hover { color: var(--red); opacity: 1; }
+
+/* 샘플 문서 */
+.sample-list { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.sample-chip {
+  font-size: 10px; padding: 3px 8px; border-radius: 12px; cursor: pointer;
+  background: var(--gray-100); color: var(--gray-600); border: 1px solid var(--gray-200);
+  transition: background .15s;
+}
+.sample-chip:hover { background: #dbeafe; color: var(--blue); border-color: #93c5fd; }
+.sample-chip.selected { background: #dbeafe; color: var(--blue); border-color: var(--blue); }
+
+/* 시나리오 탭 */
+.scenario-header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+.top-actions { display: flex; gap: 8px; margin-left: auto; }
+.section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--gray-200); }
+.section-title { font-size: 12px; font-weight: 700; color: var(--gray-500); text-transform: uppercase; letter-spacing: .06em; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(440px, 1fr)); gap: 10px; margin-bottom: 24px; }
+.card { background: var(--white); border: 1px solid var(--gray-200); border-radius: 8px; padding: 14px; transition: border-color .2s; }
+.card.running { border-color: var(--amber); }
+.card.done    { border-color: var(--green); }
+.card.error   { border-color: var(--red); }
+.card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+.card-label  { font-weight: 600; font-size: 13px; flex: 1; }
+.card-desc   { font-size: 11px; color: var(--gray-400); line-height: 1.5; margin-bottom: 10px; }
+
+/* 결과 */
+.badge { display: inline-block; font-size: 10px; font-weight: 700; border-radius: 3px; padding: 2px 6px; margin-right: 5px; }
+.badge-running { background: #fef3c7; color: #92400e; }
+.badge-done    { background: #d1fae5; color: #065f46; }
+.badge-error   { background: #fee2e2; color: #991b1b; }
+.elapsed { font-size: 11px; color: var(--gray-400); }
+pre.result-box {
+  background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: 5px;
+  padding: 10px; font-size: 11px; line-height: 1.65; white-space: pre-wrap;
+  word-break: break-word; max-height: 320px; overflow-y: auto; margin-top: 8px;
+  color: #1a4731; font-family: 'Menlo', monospace;
+}
+pre.result-box.large { max-height: 500px; }
+pre.error-box {
+  background: #fff5f5; border: 1px solid #fed7d7; border-radius: 5px;
+  padding: 10px; font-size: 11px; line-height: 1.6; white-space: pre-wrap;
+  word-break: break-word; max-height: 200px; overflow-y: auto; margin-top: 8px;
+  color: #c53030; font-family: 'Menlo', monospace;
+}
+.spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--amber); border-top-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle; margin-left: 4px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.free-result-wrap { margin-top: 12px; }
+/* 진행 로그 */
+.log-box {
+  background: #0f172a; border-radius: 5px; padding: 8px 10px;
+  font-size: 11px; line-height: 1.7; white-space: pre-wrap; word-break: break-word;
+  max-height: 160px; overflow-y: auto; margin-top: 8px; color: #94a3b8;
+  font-family: 'Menlo', monospace;
+}
+.log-box .log-phase { color: #38bdf8; }
+.log-box .log-tool  { color: #a78bfa; }
+.log-box .log-error { color: #f87171; }
+.log-box .log-batch { color: #fb923c; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>에이전트 테스트</h1>
+  <span class="env-tag" id="env-tag">연결 확인 중...</span>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('free')">자유 테스트</div>
+  <div class="tab" onclick="switchTab('scenario')">시나리오</div>
+</div>
+
+<!-- ── 자유 테스트 탭 ───────────────────────────────────────── -->
+<div id="tab-free" class="tab-panel active">
+<main>
+  <div class="free-layout">
+
+    <!-- 왼쪽: 입력 패널 -->
+    <div>
+      <div class="panel">
+        <h3>문서 업로드</h3>
+
+        <div class="dropzone" id="dropzone"
+             onclick="document.getElementById('file-input').click()"
+             ondragover="event.preventDefault();this.classList.add('drag')"
+             ondragleave="this.classList.remove('drag')"
+             ondrop="handleDrop(event)">
+          .md 파일을 드래그하거나 클릭하여 업로드
+        </div>
+        <input type="file" id="file-input" multiple accept=".md,.txt" style="display:none" onchange="handleFiles(this.files)">
+        <div class="file-list" id="file-list"></div>
+
+        <label style="margin-top:14px">샘플 문서 선택</label>
+        <div class="sample-list" id="sample-list">로딩 중...</div>
+
+        <label style="margin-top:14px">
+          분류 체계 (taxonomy)
+          <button class="btn-sm" style="margin-left:6px" onclick="loadTaxonomy()">기본값 불러오기</button>
+        </label>
+        <textarea id="taxonomy" rows="4" placeholder="taxonomy_분류체계.md 내용 (선택)"></textarea>
+
+        <label>메타데이터 (doc_metadata, JSON)</label>
+        <textarea id="metadata" rows="3" placeholder='{"파일명": {"node_path": "...", "keywords": []}}'></textarea>
+      </div>
+
+      <div class="panel" style="margin-top:12px">
+        <h3>태스크 설정</h3>
+
+        <label>업무 종류</label>
+        <select id="free-task" onchange="onTaskChange()">
+          <option value="classify">분류 (classify)</option>
+          <option value="qna" selected>질의응답 (qna)</option>
+          <option value="summarize">요약 (summarize)</option>
+          <option value="translate">번역 (translate)</option>
+        </select>
+
+        <label id="query-label">질문 / 지시사항</label>
+        <textarea id="free-query" rows="4" placeholder="예) 담보 종류별 LTV를 표로 정리해줘."></textarea>
+
+        <button class="btn-primary" style="width:100%;margin-top:14px" id="free-run-btn" onclick="runFree()">▶ 실행</button>
+      </div>
+    </div>
+
+    <!-- 오른쪽: 결과 -->
+    <div class="panel">
+      <h3>결과</h3>
+      <div id="free-log" class="log-box" style="display:none"></div>
+      <div id="free-result" class="free-result-wrap" style="color:var(--gray-400);font-size:12px">
+        문서를 업로드하고 실행 버튼을 누르세요.
+      </div>
+    </div>
+
+  </div>
+</main>
+</div>
+
+<!-- ── 시나리오 탭 ─────────────────────────────────────────── -->
+<div id="tab-scenario" class="tab-panel">
+<main>
+  <div class="scenario-header">
+    <div class="top-actions">
+      <button class="btn-primary" onclick="runAll()">전체 실행</button>
+      <button class="btn-clear" onclick="clearAll()">결과 초기화</button>
+    </div>
+  </div>
+  <div id="scenario-main">로딩 중...</div>
+</main>
+</div>
+
+<script>
+const API = 'test';
+const GROUP_LABELS = { classify:'분류', qna:'QnA', summarize:'요약', tool:'툴 검증' };
+const POLL_INTERVAL = 1500;
+let scenarios = [];
+let polls = {};
+let uploadedFiles = {};   // name → {name, content}
+let selectedSamples = {}; // filename → {name, content}
+
+// ── 탭 전환 ─────────────────────────────────────────────────
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach((el,i) => el.classList.toggle('active', ['free','scenario'][i] === tab));
+  document.querySelectorAll('.tab-panel').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+}
+
+// ── 초기화 ──────────────────────────────────────────────────
+
+async function init() {
+  try {
+    const h = await fetch('api/v1/health').then(r => r.json());
+    document.getElementById('env-tag').textContent = `API ${h.service || 'ok'}`;
+  } catch { document.getElementById('env-tag').textContent = 'API 연결 실패'; }
+
+  // 샘플 문서 목록
+  const samples = await fetch(`${API}/sample_docs`).then(r => r.json()).catch(() => []);
+  const sl = document.getElementById('sample-list');
+  sl.innerHTML = samples.map(s =>
+    `<span class="sample-chip" id="sc-${s.filename}" onclick="toggleSample('${s.filename}','${s.name}')">${s.name}</span>`
+  ).join('');
+
+  // 시나리오 목록
+  scenarios = await fetch(`${API}/scenarios`).then(r => r.json()).catch(() => []);
+  renderScenarios();
+}
+
+// ── 자유 테스트 ──────────────────────────────────────────────
+
+function onTaskChange() {
+  const t = document.getElementById('free-task').value;
+  document.getElementById('query-label').textContent =
+    t === 'qna' ? '질문' : t === 'translate' ? '번역 언어 / 지시사항' : '추가 지시사항 (선택)';
+  document.getElementById('free-query').placeholder =
+    t === 'qna' ? '예) 담보 종류별 LTV를 표로 정리해줘.' :
+    t === 'summarize' ? '(비워두면 기본 요약 실행)' :
+    t === 'translate' ? '예) 영어로 번역해줘.' : '';
+}
+
+// 파일 업로드
+function handleFiles(files) {
+  [...files].forEach(f => {
+    const r = new FileReader();
+    r.onload = e => { uploadedFiles[f.name] = {name: f.name.replace(/\.md$/,''), content: e.target.result}; renderFileList(); };
+    r.readAsText(f, 'utf-8');
+  });
+  document.getElementById('file-input').value = '';
+}
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropzone').classList.remove('drag');
+  handleFiles(e.dataTransfer.files);
+}
+function removeFile(name) { delete uploadedFiles[name]; renderFileList(); }
+function renderFileList() {
+  const el = document.getElementById('file-list');
+  el.innerHTML = Object.keys(uploadedFiles).map(n =>
+    `<div class="file-chip"><span>${n}</span><button onclick="removeFile('${n}')">✕</button></div>`
+  ).join('');
+}
+
+// 샘플 선택
+async function toggleSample(filename, name) {
+  const chip = document.getElementById('sc-' + filename);
+  if (selectedSamples[filename]) {
+    delete selectedSamples[filename];
+    chip.classList.remove('selected');
+  } else {
+    const data = await fetch(`${API}/sample_doc/${filename}`).then(r => r.json());
+    selectedSamples[filename] = {name: data.name, content: data.content};
+    chip.classList.add('selected');
+  }
+}
+
+async function loadTaxonomy() {
+  const data = await fetch(`${API}/taxonomy`).then(r => r.json());
+  document.getElementById('taxonomy').value = data.content || '';
+}
+
+async function runFree() {
+  const allDocs = {...selectedSamples, ...uploadedFiles};
+  if (Object.keys(allDocs).length === 0) { alert('문서를 선택하거나 업로드하세요.'); return; }
+
+  const btn = document.getElementById('free-run-btn');
+  btn.disabled = true;
+  document.getElementById('free-log').style.display = 'none';
+  document.getElementById('free-log').innerHTML = '';
+  document.getElementById('free-result').innerHTML =
+    '<span class="badge badge-running">실행 중</span><span class="spinner"></span>';
+
+  const fd = new FormData();
+  fd.append('task', document.getElementById('free-task').value);
+  fd.append('query', document.getElementById('free-query').value);
+  fd.append('taxonomy', document.getElementById('taxonomy').value);
+  fd.append('metadata', document.getElementById('metadata').value);
+
+  for (const [fname, info] of Object.entries(uploadedFiles)) {
+    fd.append('files', new Blob([info.content], {type:'text/plain'}), fname);
+  }
+  for (const [fname, info] of Object.entries(selectedSamples)) {
+    fd.append('files', new Blob([info.content], {type:'text/plain'}), fname + '.md');
+  }
+
+  const resp = await fetch(`${API}/free_run`, {method:'POST', body: fd}).then(r => r.json());
+  if (resp.error) {
+    document.getElementById('free-result').innerHTML =
+      `<span class="badge badge-error">오류</span><pre class="error-box">${esc(resp.error)}</pre>`;
+    btn.disabled = false;
+    return;
+  }
+  pollFree(btn, resp.job_id);
+}
+
+function renderLog(lines, boxId) {
+  const box = document.getElementById(boxId);
+  if (!box) return;
+  if (!lines || lines.length === 0) { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  box.innerHTML = lines.map(l => {
+    if (l.startsWith('▶ ['))  return `<span class="log-batch">${esc(l)}</span>`;
+    if (l.startsWith('▶'))    return `<span class="log-phase">${esc(l)}</span>`;
+    if (l.startsWith('🔧'))   return `<span class="log-tool">${esc(l)}</span>`;
+    if (l.startsWith('❌'))   return `<span class="log-error">${esc(l)}</span>`;
+    return `<span>${esc(l)}</span>`;
+  }).join('\n');
+  box.scrollTop = box.scrollHeight;
+}
+
+function pollFree(btn, jobId) {
+  const resultEl = document.getElementById('free-result');
+  const iv = setInterval(async () => {
+    const data = await fetch(`${API}/free_result/${jobId}`).then(r => r.json());
+    renderLog(data.log || [], 'free-log');
+    if (data.status === 'running') return;
+    clearInterval(iv);
+    btn.disabled = false;
+    const elapsed = data.elapsed ? `<span class="elapsed">${data.elapsed}s</span>` : '';
+    if (data.status === 'error') {
+      resultEl.innerHTML = `<span class="badge badge-error">오류</span>${elapsed}<pre class="error-box">${esc(data.error)}</pre>`;
+    } else if (data.status === 'done') {
+      const r = data.result;
+      const text = typeof r === 'object' ? JSON.stringify(r, null, 2) : String(r);
+      resultEl.innerHTML = `<span class="badge badge-done">완료</span>${elapsed}<pre class="result-box large">${esc(text)}</pre>`;
+    }
+  }, POLL_INTERVAL);
+}
+
+// ── 시나리오 탭 ──────────────────────────────────────────────
+
+function renderScenarios() {
+  const groups = {};
+  scenarios.forEach(s => { (groups[s.group] = groups[s.group] || []).push(s); });
+  const main = document.getElementById('scenario-main');
+  main.innerHTML = Object.entries(groups).map(([gid, list]) => `
+    <section>
+      <div class="section-header">
+        <span class="section-title">${GROUP_LABELS[gid] || gid}</span>
+        <button class="btn-group" onclick="runGroup('${gid}')">그룹 전체 실행</button>
+      </div>
+      <div class="cards">${list.map(s => cardHTML(s)).join('')}</div>
+    </section>`).join('');
+}
+
+function cardHTML(s) {
+  return `
+    <div class="card" id="card-${s.id}">
+      <div class="card-header">
+        <span class="card-label">${esc(s.label)}</span>
+        <button class="btn-run" id="btn-${s.id}" onclick="runOne('${s.id}')">▶ 실행</button>
+      </div>
+      <div class="card-desc">${esc(s.desc)}</div>
+      <div id="log-${s.id}" class="log-box" style="display:none"></div>
+      <div id="result-${s.id}"></div>
+    </div>`;
+}
+
+function setResult(sid, data) {
+  const card = document.getElementById(`card-${sid}`);
+  const wrap = document.getElementById(`result-${sid}`);
+  const btn  = document.getElementById(`btn-${sid}`);
+  if (!card) return;
+  card.className = 'card ' + (data.status || '');
+  btn.disabled = data.status === 'running';
+  renderLog(data.log || [], `log-${sid}`);
+  if (!data.status || data.status === 'idle') { wrap.innerHTML = ''; return; }
+  if (data.status === 'running') {
+    if (!wrap.innerHTML) wrap.innerHTML = `<span class="badge badge-running">실행 중</span><span class="spinner"></span>`;
+    return;
+  }
+  const elapsed = data.elapsed ? `<span class="elapsed">${data.elapsed}s</span>` : '';
+  if (data.status === 'error') {
+    wrap.innerHTML = `<span class="badge badge-error">오류</span>${elapsed}<pre class="error-box">${esc(data.error||'')}</pre>`;
+    return;
+  }
+  const r = data.result;
+  let text;
+  if (Array.isArray(r) && r.length && r[0] && typeof r[0] === 'object' && 'doc' in r[0]) {
+    text = r.map((item, i) => {
+      const res = typeof item.result === 'object' ? JSON.stringify(item.result, null, 2) : String(item.result ?? '');
+      return `[${i+1}] ${item.doc}\n${res}`;
+    }).join('\n\n' + '─'.repeat(40) + '\n\n');
+  } else {
+    text = Array.isArray(r)
+      ? r.map(i => typeof i === 'object' ? JSON.stringify(i,null,2) : String(i)).join('\n\n---\n\n')
+      : typeof r === 'object' ? JSON.stringify(r,null,2) : String(r??'');
+  }
+  wrap.innerHTML = `<span class="badge badge-done">완료</span>${elapsed}<pre class="result-box">${esc(text)}</pre>`;
+}
+
+async function runOne(sid) {
+  await fetch(`${API}/run/${sid}`, {method:'POST'});
+  setResult(sid, {status:'running'});
+  poll(sid);
+}
+async function runGroup(gid) {
+  const ids = await fetch(`${API}/run_group/${gid}`, {method:'POST'}).then(r => r.json());
+  ids.forEach(sid => { setResult(sid, {status:'running'}); poll(sid); });
+}
+async function runAll() {
+  const ids = await fetch(`${API}/run_all`, {method:'POST'}).then(r => r.json());
+  ids.forEach(sid => { setResult(sid, {status:'running'}); poll(sid); });
+}
+async function clearAll() {
+  await fetch(`${API}/clear`, {method:'POST'});
+  scenarios.forEach(s => setResult(s.id, {status:'idle'}));
+}
+function poll(sid) {
+  if (polls[sid]) return;
+  polls[sid] = setInterval(async () => {
+    const data = await fetch(`${API}/result/${sid}`).then(r => r.json());
+    setResult(sid, data);
+    if (data.status !== 'running') { clearInterval(polls[sid]); delete polls[sid]; }
+  }, POLL_INTERVAL);
+}
+
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+init();
+</script>
+</body>
+</html>

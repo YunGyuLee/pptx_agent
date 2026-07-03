@@ -1,0 +1,13 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Local runtime files
+.env
+app/workspace/
+test_package/workspace/
+test_package/output/
+app/workspace/pptx_jobs/
